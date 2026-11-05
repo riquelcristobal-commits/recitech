@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recitech · Recicla, repara y gana</title>
+    <!-- Tailwind CSS para un diseño moderno y rápido -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- Lucide Icons para los iconos de la interfaz -->
+    <script src="https://unpkg.com"></script>
+    <style>
+        @import url('https://googleapis.com');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-12">
+
+    <!-- Navbar / Header -->
+    <header class="bg-white border-b border-slate-100 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="bg-emerald-500 p-2 rounded-xl text-white">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 animate-spin-slow"></i>
+                </div>
+                <span class="font-bold text-xl tracking-tight text-slate-900">Reci<span class="text-emerald-500">tech</span></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <i data-lucide="star" class="w-4 h-4 text-emerald-500 fill-emerald-500"></i>
+                    <span id="nav-points" class="font-bold text-emerald-700 text-sm">0 pts</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-6 space-y-6">
+
+        <!-- Hero Welcome -->
+        <div class="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute right-0 bottom-0 opacity-10 translate-x-6 translate-y-6">
+                <i data-lucide="leaf" class="w-64 h-64"></i>
+            </div>
+            <span class="bg-emerald-500/30 text-emerald-100 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">¡Hola, reciclador/a!</span>
+            <h1 class="text-3xl font-extrabold mt-3">Tu saldo: <span id="hero-points">0 pts</span></h1>
+            <p class="text-emerald-100/90 text-sm mt-2 max-w-xl">Cada dispositivo que recicles fuera de la Región Metropolitana ayuda a descentralizar el reciclaje en Chile.</p>
+            <div class="flex gap-3 mt-6">
+                <a href="#calculadora" class="bg-white text-emerald-700 px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-50 transition flex items-center gap-2">
+                    <i data-lucide="calculator" class="w-4 h-4"></i> Calcular puntos
+                </a>
+                <a href="#catalogo" class="bg-emerald-500/40 text-white border border-emerald-400/30 px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-500/60 transition flex items-center gap-2">
+                    <i data-lucide="gift" class="w-4 h-4"></i> Canjear
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                <span class="text-slate-400 text-xs font-medium uppercase tracking-wider block">CO₂ evitado</span>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span id="stat-co2" class="text-2xl font-bold text-slate-800">0</span>
+                    <span class="text-xs font-semibold text-slate-500">kg</span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                <span class="text-slate-400 text-xs font-medium uppercase tracking-wider block">Dispositivos</span>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span id="stat-devices" class="text-2xl font-bold text-slate-800">0</span>
+                    <span class="text-xs font-semibold text-slate-500">uds</span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                <span class="text-slate-400 text-xs font-medium uppercase tracking-wider block">Cupones activos</span>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span id="stat-coupons" class="text-2xl font-bold text-slate-800">0</span>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                <span class="text-slate-400 text-xs font-medium uppercase tracking-wider block">Movimientos</span>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span id="stat-history" class="text-2xl font-bold text-slate-800">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info & Context Analytics -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="text-emerald-500 w-5 h-5"></i> ¿Por qué importa?
+                </h3>
+                <ul class="space-y-3 text-sm text-slate-600">
+                    <li class="flex items-start gap-3">
+                        <i data-lucide="globe" class="w-5 h-5 text-indigo-500 shrink-0 mt-0.5"></i>
+                        <span>Se generan <strong class="text-slate-900">62 millones de toneladas</strong> de RAEE en el mundo y crecen <strong class="text-slate-900">3 veces más rápido</strong> que la basura domiciliaria.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i data-lucide="map" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5"></i>
+                        <span>Chile genera cerca de <strong class="text-slate-900">220 mil toneladas</strong> y solo se recicla un <strong class="text-slate-900">4,1%</strong>.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-500 shrink-0 mt-0.5"></i>
+                        <span>Mal desechados liberan <strong class="text-slate-900">plomo (Pb)</strong>, <strong class="text-slate-900">mercurio (Hg)</strong> y <strong class="text-slate-900">cadmio (Cd)</strong> al suelo y al agua.</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between items-center text-center">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Reciclaje de RAEE en Chile</span>
+                <div class="relative w-32 h-32 my-2 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-slate-100" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-emerald-500" stroke-dasharray="4.1, 100" stroke-width="3" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <span class="absolute text-2xl font-extrabold text-slate-800">4,1%</span>
+                </div>
+                <p class="text-xs text-slate-500 font-medium">Hay mucho espacio para mejorar. Tú puedes ser parte.</p>
+            </div>
+        </div>
+
+        <!-- Historial Reciente Section -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2 mb-4">
+                <i data-lucide="history" class="text-slate-500 w-5 h-5"></i> Historial reciente
+            </h3>
+            <div id="history-container" class="text-center py-6 text-slate-400 text-sm">
+                <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 opacity-60"></i>
+                <p>Aún no has registrado entregas o canjes.</p>
+            </div>
+        </div>
+
+        <!-- Eco-Reparación Tip -->
+        <div class="bg-amber-50 border border-amber-200/60 p-5 rounded-2xl flex items-start gap-4">
+            <div class="bg-amber-500 text-white p-2 rounded-xl shrink-0">
+                <i data-lucide="wrench" class="w-5 h-5"></i>
+            </div>
+            <div class="space-y-1">
+                <h4 class="font-bold text-amber-900 text-sm">Antes de reciclar, ¿puedes reparar?</h4>
+                <p class="text-amber-800/90 text-sm leading-relaxed">Alargar la vida de un equipo es la mejor forma de reducir RAEE. Un celular con pantalla rota o una batería gastada muchas veces tiene arreglo. Si no lo tiene, <strong class="text-amber-950">marca "Para repuesto"</strong> en la calculadora: sus piezas pueden servir a otros.</p>
+            </div>
+        </div>
+
+        <!-- Geolocation & Points Finder -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+                <i data-lucide="map-pin" class="text-emerald-500 w-5 h-5"></i> Puntos Limpios regionales
+            </h3>
+            <p class="text-xs text-slate-500 -mt-2">Busca por comuna. (Datos ilustrativos para la demo.)</p>

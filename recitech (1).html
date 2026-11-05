@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recitech · Recicla, repara y gana</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { eco: { DEFAULT: '#16a34a', dark: '#15803d', light: '#dcfce7' }, tech: { DEFAULT: '#0284c7', dark: '#0369a1', light: '#e0f2fe' } } } }
+  };
+</script>
+<style>
+  body { background: #f1f5f9; }
+  .view { display: none; }
+  .view.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .btn { transition: transform .15s, box-shadow .15s, background-color .15s; }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,.15); }
+  .btn:active { transform: scale(.96); box-shadow: none; }
+  .scan-line { position: absolute; left: 0; right: 0; height: 3px; background: #22c55e; box-shadow: 0 0 14px 4px rgba(34,197,94,.7); animation: scan 1.2s linear infinite; }
+  @keyframes scan { 0% { top: 4%; } 50% { top: 94%; } 100% { top: 4%; } }
+  .toast { animation: toastIn .3s ease; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+  .pop { animation: pop .35s ease; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  .ad-float { animation: adFloat 3s ease-in-out infinite; }
+  @keyframes adFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  .ad-up { animation: adUp .6s ease both; }
+  @keyframes adUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .ad-pulse { animation: adPulse 1.4s ease-in-out infinite; }
+  @keyframes adPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.6); } 50% { box-shadow: 0 0 0 10px rgba(255,255,255,0); } }
+</style>
+</head>
+<body class="font-sans text-slate-800 pb-24 md:pb-8">
+
+<!-- TOASTS -->
+<div id="toasts" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm space-y-2 pointer-events-none"></div>
+
+<!-- HEADER / NAV SUPERIOR (desktop) -->
+<header class="bg-gradient-to-r from-eco to-tech text-white sticky top-0 z-40 shadow-md">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('dashboard')">
+      <span class="text-2xl">♻️</span>
+      <span class="text-xl font-extrabold tracking-tight">Reci<span class="text-green-200">tech</span></span>
+    </div>
+    <nav class="hidden md:flex gap-1" id="topNav"></nav>
+    <div id="pointsBadge" class="bg-white/20 backdrop-blur rounded-full px-3 py-1 text-sm font-bold flex items-center gap-1">⭐ <span id="headerPoints">0</span> pts</div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-5">
+
+  <!-- 1. DASHBOARD -->
+  <section id="view-dashboard" class="view">
+    <div class="rounded-3xl bg-gradient-to-br from-eco to-tech text-white p-6 shadow-lg">
+      <p class="text-sm opacity-90">¡Hola, reciclador/a!</p>
+      <h1 class="text-3xl font-extrabold mt-1">Tu saldo: <span id="dashPoints" class="inline-block">0</span> pts</h1>
+      <p class="text-sm mt-2 opacity-90">Cada dispositivo que recicles fuera de la Región Metropolitana ayuda a descentralizar el reciclaje en Chile.</p>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <button onclick="navigate('calculadora')" class="btn bg-white text-eco-dark font-bold rounded-full px-4 py-2 text-sm">🧮 Calcular puntos</button>
+        <button onclick="navigate('canje')" class="btn bg-white/20 border border-white/40 font-bold rounded-full px-4 py-2 text-sm">🎁 Canjear</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500">CO₂ evitado</p>
+        <p class="text-2xl font-extrabold text-eco"><span id="dashCo2">0</span> kg</p>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500">Dispositivos reciclados</p>
+        <p class="text-2xl font-extrabold text-tech" id="dashDevices">0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500">Cupones activos</p>
+        <p class="text-2xl font-extrabold text-eco" id="dashCoupons">0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-4 shadow-sm">
+        <p class="text-xs text-slate-500">Movimientos</p>
+        <p class="text-2xl font-extrabold text-tech" id="dashMoves">0</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mt-4">
+      <div class="bg-white rounded-3xl p-5 shadow-sm">
+        <h2 class="font-bold text-lg mb-3">📊 ¿Por qué importa?</h2>
+        <ul class="space-y-3 text-sm">
+          <li class="flex gap-3"><span class="text-2xl">🌍</span><span>Se generan <b>62 millones de toneladas</b> de RAEE en el mundo y crecen <b>3 veces más rápido</b> que la basura domiciliaria.</span></li>
+          <li class="flex gap-3"><span class="text-2xl">🇨🇱</span><span>Chile genera cerca de <b>220 mil toneladas</b> y solo se recicla un <b>4,1%</b>.</span></li>
+          <li class="flex gap-3"><span class="text-2xl">☣️</span><span>Mal desechados liberan <b>plomo (Pb)</b>, <b>mercurio (Hg)</b> y <b>cadmio (Cd)</b> al suelo y al agua.</span></li>
+        </ul>
+        <div class="mt-4">
+          <div class="flex justify-between text-xs mb-1"><span>Reciclaje de RAEE en Chile</span><span>4,1%</span></div>
+          <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-eco rounded-full" style="width:4.1%"></div></div>
+          <p class="text-xs text-slate-500 mt-1">Hay mucho espacio para mejorar. Tú puedes ser parte.</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-bold text-lg">🕘 Historial reciente</h2>
+        </div>
+        <ul id="historyList" class="space-y-2 max-h-72 overflow-y-auto"></ul>
+      </div>
+    </div>
+
+    <div data-ad class="mt-4"></div>
+
+    <div class="bg-tech-light rounded-3xl p-5 mt-4">
+      <h2 class="font-bold text-lg text-tech-dark">🔧 Antes de reciclar, ¿puedes reparar?</h2>
+      <p class="text-sm mt-1">Alargar la vida de un equipo es la mejor forma de reducir RAEE. Un celular con pantalla rota o una batería gastada muchas veces tiene arreglo. Si no lo tiene, <b>marca "Para repuesto"</b> en la calculadora: sus piezas pueden servir a otros.</p>
+    </div>
+  </section>
+
+  <!-- 2. PUNTOS LIMPIOS -->
+  <section id="view-puntos" class="view">
+    <h1 class="text-2xl font-extrabold">📍 Puntos Limpios regionales</h1>
+    <p class="text-sm text-slate-600 mb-4">Busca por comuna. <span class="text-xs text-slate-400">(Datos ilustrativos para la demo.)</span></p>
+    <div class="relative">
+      <input id="comunaSearch" type="search" placeholder="Ej: Concepción, Talcahuano, Chillán, Temuco…" class="w-full rounded-2xl border border-slate-200 px-4 py-3 pl-11 focus:outline-none focus:ring-2 focus:ring-eco bg-white">
+      <span class="absolute left-4 top-3.5">🔎</span>
+    </div>
+    <div id="comunaChips" class="flex flex-wrap gap-2 mt-3"></div>
+    <p id="puntosCount" class="text-xs text-slate-500 mt-3"></p>
+    <div id="puntosGrid" class="grid md:grid-cols-2 gap-3 mt-2"></div>
+    <div data-ad class="mt-4"></div>
+    <div id="puntosEmpty" class="hidden text-center bg-white rounded-3xl p-8 mt-3">
+      <p class="text-4xl">🗺️</p>
+      <p class="font-bold mt-2">No encontramos puntos en esa comuna</p>
+      <p class="text-sm text-slate-500">Prueba con otra comuna del Biobío, Ñuble o La Araucanía.</p>
+    </div>
+  </section>
+
+  <!-- 3. CALCULADORA -->
+  <section id="view-calculadora" class="view">
+    <h1 class="text-2xl font-extrabold">🧮 Calculadora RAEE</h1>
+    <p class="text-sm text-slate-600 mb-4">Los puntos se actualizan al instante.</p>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-white rounded-3xl p-5 shadow-sm space-y-4">
+        <div>
+          <label class="text-sm font-semibold">Tipo de dispositivo</label>
+          <select id="calcTipo" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-eco">
+            <option value="celular">📱 Celular (100 pts)</option>
+            <option value="tablet">📲 Tablet (150 pts)</option>
+            <option value="computador">💻 Computador (300 pts)</option>
+            <option value="baterias">🔋 Baterías (50 pts)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-semibold">Cantidad</label>
+          <div class="mt-1 flex items-center gap-2">
+            <button type="button" id="qtyMinus" class="btn w-12 h-12 rounded-xl bg-slate-100 text-xl font-bold">−</button>
+            <input id="calcCant" type="number" min="1" max="99" value="1" class="flex-1 text-center rounded-xl border border-slate-200 px-3 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-eco">
+            <button type="button" id="qtyPlus" class="btn w-12 h-12 rounded-xl bg-slate-100 text-xl font-bold">+</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-sm font-semibold">Estado</label>
+          <div class="mt-1 grid grid-cols-3 gap-2" id="estadoGroup">
+            <label class="cursor-pointer"><input type="radio" name="estado" value="1.2" class="peer hidden" checked><div class="btn peer-checked:bg-eco peer-checked:text-white peer-checked:border-eco border border-slate-200 rounded-xl p-2 text-center text-xs font-semibold">Funcional<br><span class="opacity-80">×1.2</span></div></label>
+            <label class="cursor-pointer"><input type="radio" name="estado" value="1.0" class="peer hidden"><div class="btn peer-checked:bg-eco peer-checked:text-white peer-checked:border-eco border border-slate-200 rounded-xl p-2 text-center text-xs font-semibold">Para repuesto<br><span class="opacity-80">×1.0</span></div></label>
+            <label class="cursor-pointer"><input type="radio" name="estado" value="0.8" class="peer hidden"><div class="btn peer-checked:bg-eco peer-checked:text-white peer-checked:border-eco border border-slate-200 rounded-xl p-2 text-center text-xs font-semibold">Inoperativo<br><span class="opacity-80">×0.8</span></div></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-tech to-eco text-white rounded-3xl p-6 shadow-lg flex flex-col justify-between">
+        <div>
+          <p class="text-sm opacity-90">Ganarías</p>
+          <p class="text-5xl font-extrabold my-2"><span id="calcResult">0</span> <span class="text-xl">pts</span></p>
+          <p class="text-sm opacity-90" id="calcFormula"></p>
+          <p class="text-sm mt-3">🌱 CO₂ estimado evitado: <b><span id="calcCo2">0</span> kg</b></p>
+        </div>
+        <button id="btnRegistrar" class="btn mt-6 bg-white text-eco-dark font-extrabold rounded-2xl py-4 text-lg">♻️ Registrar y Reciclar</button>
+      </div>
+    </div>
+    <div data-ad class="mt-4"></div>
+    <p class="text-xs text-slate-400 mt-3">Los kg de CO₂ son estimaciones de demostración, no cifras certificadas.</p>
+  </section>
+
+  <!-- 4. QR -->
+  <section id="view-qr" class="view">
+    <h1 class="text-2xl font-extrabold">📷 Simulador de escaneo QR</h1>
+    <p class="text-sm text-slate-600 mb-4">Escanea la boleta de entrega en el punto limpio y gana <b>+120 pts</b>.</p>
+    <div class="bg-white rounded-3xl p-5 shadow-sm max-w-md mx-auto text-center">
+      <div id="qrBox" class="relative mx-auto w-64 h-64 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center">
+        <div id="qrPattern" class="grid grid-cols-9 gap-0.5 w-44 h-44 opacity-80"></div>
+        <div id="scanLine" class="scan-line hidden"></div>
+        <div id="qrOk" class="hidden absolute inset-0 bg-eco/90 flex-col items-center justify-center text-white pop">
+          <span class="text-6xl">✅</span><span class="font-extrabold mt-2">¡Boleta validada!</span>
+        </div>
+        <span class="absolute top-2 left-2 w-6 h-6 border-t-4 border-l-4 border-green-400 rounded-tl-lg"></span>
+        <span class="absolute top-2 right-2 w-6 h-6 border-t-4 border-r-4 border-green-400 rounded-tr-lg"></span>
+        <span class="absolute bottom-2 left-2 w-6 h-6 border-b-4 border-l-4 border-green-400 rounded-bl-lg"></span>
+        <span class="absolute bottom-2 right-2 w-6 h-6 border-b-4 border-r-4 border-green-400 rounded-br-lg"></span>
+      </div>
+      <p id="qrStatus" class="text-sm text-slate-600 mt-4 min-h-[1.25rem]">Listo para escanear.</p>
+      <button id="btnScan" class="btn mt-3 w-full bg-tech text-white font-extrabold rounded-2xl py-4 text-lg">Simular Escaneo de Boleta</button>
+    </div>
+  </section>
+
+  <!-- 5. CANJE -->
+  <section id="view-canje" class="view">
+    <div class="flex items-end justify-between flex-wrap gap-2">
+      <div>
+        <h1 class="text-2xl font-extrabold">🎁 Catálogo de canje</h1>
+        <p class="text-sm text-slate-600">Tu saldo: <b class="text-eco"><span id="canjePoints">0</span> pts</b></p>
+      </div>
+    </div>
+    <div id="catalogGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4"></div>
+
+    <div data-ad class="mt-5"></div>
+
+    <h2 class="font-bold text-lg mt-6 mb-2">🎟️ Mis cupones</h2>
+    <ul id="couponList" class="space-y-2"></ul>
+    <p id="couponEmpty" class="text-sm text-slate-500 bg-white rounded-2xl p-4">Aún no tienes cupones. ¡Canjea tu primer premio!</p>
+  </section>
+</main>
+
+<!-- NAV INFERIOR (mobile) -->
+<nav id="bottomNav" class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 grid grid-cols-5"></nav>
+
+<script>
+/* ================= ESTADO GLOBAL ================= */
+const state = { puntos: 320, co2Evitado: 14.5, dispositivosReciclados: 3, historial: [], cupones: [] };
+
+const TIPOS = {
+  celular:    { nombre: 'Celular',     emoji: '📱', pts: 100, co2: 4.2 },
+  tablet:     { nombre: 'Tablet',      emoji: '📲', pts: 150, co2: 6.5 },
+  computador: { nombre: 'Computador',  emoji: '💻', pts: 300, co2: 18 },
+  baterias:   { nombre: 'Baterías',    emoji: '🔋', pts: 50,  co2: 0.8 }
+};
+const ESTADOS = { '1.2': 'Funcional', '1': 'Para repuesto', '0.8': 'Inoperativo' };
+
+const VIEWS = [
+  { id: 'dashboard',  label: 'Inicio',      icon: '🏠' },
+  { id: 'puntos',     label: 'Puntos',      icon: '📍' },
+  { id: 'calculadora',label: 'Calculadora', icon: '🧮' },
+  { id: 'qr',         label: 'Escanear',    icon: '📷' },
+  { id: 'canje',      label: 'Canje',       icon: '🎁' }
+];
+
+const PUNTOS_LIMPIOS = [
+  { nombre: 'Punto Limpio Centro Concepción', comuna: 'Concepción', region: 'Biobío', dir: 'Av. Ejemplo 123 (demo)', horario: 'Lun–Sáb 9:00–18:00', acepta: ['Celulares','Tablets','Baterías'] },
+  { nombre: 'EcoPunto Barrio Universitario', comuna: 'Concepción', region: 'Biobío', dir: 'Calle Campus 456 (demo)', horario: 'Lun–Vie 10:00–17:00', acepta: ['Computadores','Celulares','Baterías'] },
+  { nombre: 'Centro de Acopio Talcahuano Puerto', comuna: 'Talcahuano', region: 'Biobío', dir: 'Costanera 789 (demo)', horario: 'Lun–Vie 9:00–17:30', acepta: ['Celulares','Baterías','Tablets'] },
+  { nombre: 'Punto Verde Coronel', comuna: 'Coronel', region: 'Biobío', dir: 'Plaza Central 21 (demo)', horario: 'Mar–Sáb 10:00–16:00', acepta: ['Baterías','Celulares'] },
+  { nombre: 'EcoPunto Chillán Centro', comuna: 'Chillán', region: 'Ñuble', dir: 'Av. Principal 321 (demo)', horario: 'Lun–Sáb 9:30–18:00', acepta: ['Computadores','Tablets','Celulares','Baterías'] },
+  { nombre: 'Acopio Municipal San Carlos', comuna: 'San Carlos', region: 'Ñuble', dir: 'Calle Municipal 55 (demo)', horario: 'Lun–Vie 9:00–14:00', acepta: ['Baterías','Celulares'] },
+  { nombre: 'Punto Limpio Temuco Norte', comuna: 'Temuco', region: 'La Araucanía', dir: 'Av. Norte 654 (demo)', horario: 'Lun–Sáb 9:00–19:00', acepta: ['Computadores','Celulares','Tablets','Baterías'] },
+  { nombre: 'EcoCentro Padre Las Casas', comuna: 'Padre Las Casas', region: 'La Araucanía', dir: 'Camino Sur 98 (demo)', horario: 'Lun–Vie 10:00–16:00', acepta: ['Celulares','Baterías'] },
+  { nombre: 'Punto Limpio Los Ángeles', comuna: 'Los Ángeles', region: 'Biobío', dir: 'Av. Oriente 210 (demo)', horario: 'Lun–Sáb 9:00–17:00', acepta: ['Tablets','Celulares','Baterías'] }
+];
+
+const CATALOGO = [
+  { id: 1, nombre: 'Audífonos Bluetooth', emoji: '🎧', costo: 250 },
+  { id: 2, nombre: 'Powerbank 10.000 mAh', emoji: '🔋', costo: 150 },
+  { id: 3, nombre: 'Kit de reparación', emoji: '🪛', costo: 120 },
+  { id: 4, nombre: 'Cable USB-C trenzado', emoji: '🔌', costo: 60 },
+  { id: 5, nombre: 'Taller de reparación online', emoji: '🎓', costo: 200 },
+  { id: 6, nombre: 'Bolsa reutilizable Recitech', emoji: '👜', costo: 80 }
+];
+
+/* ================= UTILIDADES ================= */
+const $ = (s, r = document) => r.querySelector(s);
+const fmt = n => Number(n).toLocaleString('es-CL', { maximumFractionDigits: 1 });
+const now = () => new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+function toast(msg, type = 'success') {
+  const colors = { success: 'bg-eco', error: 'bg-red-600', info: 'bg-tech' };
+  const icons = { success: '✅', error: '⚠️', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast ${colors[type]} text-white rounded-2xl px-4 py-3 shadow-xl text-sm font-semibold flex gap-2 items-start`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, 3200);
+}
+
+function addHistory(tipo, texto, pts) {
+  state.historial.unshift({ tipo, texto, pts, hora: now() });
+}
+
+/* ================= NAVEGACIÓN SPA ================= */
+function buildNav() {
+  $('#topNav').innerHTML = VIEWS.map(v =>
+    `<button data-nav="${v.id}" class="btn px-3 py-2 rounded-full text-sm font-semibold hover:bg-white/20">${v.icon} ${v.label}</button>`).join('');
+  $('#bottomNav').innerHTML = VIEWS.map(v =>
+    `<button data-nav="${v.id}" class="btn flex flex-col items-center py-2 text-[11px] font-semibold text-slate-500"><span class="text-xl">${v.icon}</span>${v.label}</button>`).join('');
+  document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => navigate(b.dataset.nav)));
+}
+
+function navigate(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $('#view-' + id).classList.add('active');
+  $('#topNav').querySelectorAll('button').forEach(b => {
+    b.classList.toggle('bg-white', b.dataset.nav === id);
+    b.classList.toggle('text-eco-dark', b.dataset.nav === id);
+  });
+  $('#bottomNav').querySelectorAll('button').forEach(b => {
+    const on = b.dataset.nav === id;
+    b.classList.toggle('text-eco', on);
+    b.classList.toggle('text-slate-500', !on);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  render();
+}
+
+/* ================= RENDER GLOBAL ================= */
+let lastPoints = null;
+function render() {
+  $('#headerPoints').textContent = fmt(state.puntos);
+  $('#dashPoints').textContent = fmt(state.puntos);
+  $('#canjePoints').textContent = fmt(state.puntos);
+  $('#dashCo2').textContent = fmt(state.co2Evitado);
+  $('#dashDevices').textContent = state.dispositivosReciclados;
+  $('#dashCoupons').textContent = state.cupones.length;
+  $('#dashMoves').textContent = state.historial.length;
+
+  if (lastPoints !== null && lastPoints !== state.puntos) {
+    ['#pointsBadge', '#dashPoints'].forEach(s => { const e = $(s); e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); });
+  }
+  lastPoints = state.puntos;
+
+  // historial
+  const hl = $('#historyList');
+  hl.innerHTML = state.historial.length ? state.historial.map(h => `
+    <li class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 text-sm">
+      <span class="flex items-center gap-2"><span>${h.tipo === 'canje' ? '🎁' : h.tipo === 'qr' ? '📷' : '♻️'}</span>
+        <span>${h.texto}<span class="block text-[11px] text-slate-400">${h.hora}</span></span></span>
+      <b class="${h.pts >= 0 ? 'text-eco' : 'text-red-600'}">${h.pts >= 0 ? '+' : ''}${h.pts}</b>
+    </li>`).join('') : '<li class="text-sm text-slate-500 p-3 text-center">Aún no hay movimientos. ¡Recicla tu primer dispositivo!</li>';
+
+  renderCatalog();
+  renderCoupons();
+}
+
+/* ================= PUNTOS LIMPIOS ================= */
+function normalize(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+
+function renderPuntos() {
+  const q = normalize($('#comunaSearch').value);
+  const list = PUNTOS_LIMPIOS.filter(p => normalize(p.comuna).includes(q) || normalize(p.region).includes(q));
+  $('#puntosGrid').innerHTML = list.map(p => `
+    <article class="bg-white rounded-3xl p-5 shadow-sm hover:shadow-md transition">
+      <div class="flex justify-between items-start gap-2">
+        <h3 class="font-bold">${p.nombre}</h3>
+        <span class="text-[11px] bg-eco-light text-eco-dark font-bold rounded-full px-2 py-1 whitespace-nowrap">${p.comuna}</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">${p.region}</p>
+      <p class="text-sm mt-2">📍 ${p.dir}</p>
+      <p class="text-sm">🕒 ${p.horario}</p>
+      <div class="flex flex-wrap gap-1 mt-3">${p.acepta.map(a => `<span class="text-[11px] bg-tech-light text-tech-dark rounded-full px-2 py-0.5">${a}</span>`).join('')}</div>
+      <button class="btn mt-4 w-full bg-eco text-white rounded-xl py-2 text-sm font-bold" onclick="toast('Ruta a «${p.nombre}» (simulada)','info')">Cómo llegar</button>
+    </article>`).join('');
+  $('#puntosEmpty').classList.toggle('hidden', list.length > 0);
+  $('#puntosCount').textContent = `${list.length} punto${list.length === 1 ? '' : 's'} encontrado${list.length === 1 ? '' : 's'}`;
+}
+
+function buildChips() {
+  const comunas = ['Todas', ...new Set(PUNTOS_LIMPIOS.map(p => p.comuna))];
+  $('#comunaChips').innerHTML = comunas.map(c =>
+    `<button class="btn bg-white border border-slate-200 rounded-full px-3 py-1 text-xs font-semibold" data-chip="${c}">${c}</button>`).join('');
+  $('#comunaChips').addEventListener('click', e => {
+    const c = e.target.closest('[data-chip]'); if (!c) return;
+    $('#comunaSearch').value = c.dataset.chip === 'Todas' ? '' : c.dataset.chip;
+    renderPuntos();
+  });
+}
+
+/* ================= CALCULADORA ================= */
+function calc() {
+  const tipo = TIPOS[$('#calcTipo').value];
+  const cant = Math.max(1, Math.min(99, parseInt($('#calcCant').value) || 1));
+  const mult = parseFloat(document.querySelector('input[name=estado]:checked').value);
+  const pts = Math.round(tipo.pts * cant * mult);
+  const co2 = +(tipo.co2 * cant).toFixed(1);
+  return { tipo, cant, mult, pts, co2 };
+}
+
+function updateCalc() {
+  const c = calc();
+  $('#calcResult').textContent = fmt(c.pts);
+  $('#calcCo2').textContent = fmt(c.co2);
+  $('#calcFormula').textContent = `${c.tipo.pts} pts × ${c.cant} × ${c.mult}`;
+}
+
+function registrar() {
+  const c = calc();
+  const claveEstado = ESTADOS[String(c.mult)] || ESTADOS[c.mult.toFixed(1)] || '';
+  state.puntos += c.pts;
+  state.co2Evitado = +(state.co2Evitado + c.co2).toFixed(1);
+  state.dispositivosReciclados += c.cant;
+  addHistory('reciclaje', `${c.cant}× ${c.tipo.nombre} (${claveEstado.toLowerCase()})`, c.pts);
+  toast(`¡Reciclaje registrado! +${c.pts} pts · ${c.co2} kg de CO₂ evitados`);
+  render();
+}
+
+/* ================= QR ================= */
+let scanning = false;
+function buildQrPattern() {
+  $('#qrPattern').innerHTML = Array.from({ length: 81 }, () =>
+    `<div class="${Math.random() > .5 ? 'bg-white' : 'bg-transparent'} rounded-[1px]"></div>`).join('');
+}
+function simulateScan() {
+  if (scanning) return;
+  scanning = true;
+  const btn = $('#btnScan');
+  btn.disabled = true; btn.classList.add('opacity-60', 'cursor-not-allowed');
+  $('#qrOk').classList.add('hidden'); $('#qrOk').classList.remove('flex');
+  $('#scanLine').classList.remove('hidden');
+  const msgs = ['Buscando código QR…', 'Leyendo boleta…', 'Validando con el punto limpio…'];
+  let i = 0; $('#qrStatus').textContent = msgs[0];
+  const iv = setInterval(() => { i = Math.min(i + 1, msgs.length - 1); $('#qrStatus').textContent = msgs[i]; }, 700);
+  setTimeout(() => {
+    clearInterval(iv);
+    $('#scanLine').classList.add('hidden');
+    $('#qrOk').classList.remove('hidden'); $('#qrOk').classList.add('flex');
+    state.puntos += 120;
+    const folio = 'B-' + Math.floor(100000 + Math.random() * 900000);
+    addHistory('qr', `Boleta escaneada ${folio}`, 120);
+    $('#qrStatus').textContent = `Boleta ${folio} validada.`;
+    toast('¡Boleta validada! +120 pts');
+    render();
+    setTimeout(() => {
+      $('#qrOk').classList.add('hidden'); $('#qrOk').classList.remove('flex');
+      buildQrPattern();
+      btn.disabled = false; btn.classList.remove('opacity-60', 'cursor-not-allowed');
+      scanning = false;
+    }, 1800);
+  }, 2200);
+}
+
+/* ================= CANJE ================= */
+function genCoupon() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const part = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `RCT-${part()}-${part()}`;
+}
+
+function renderCatalog() {
+  $('#catalogGrid').innerHTML = CATALOGO.map(p => {
+    const ok = state.puntos >= p.costo;
+    return `
+    <article class="bg-white rounded-3xl p-4 shadow-sm flex flex-col">
+      <div class="text-5xl text-center py-3 bg-slate-50 rounded-2xl">${p.emoji}</div>
+      <h3 class="font-bold text-sm mt-3 leading-tight">${p.nombre}</h3>
+      <p class="font-extrabold ${ok ? 'text-eco' : 'text-slate-400'} mt-1">${p.costo} pts</p>
+      <p class="text-[11px] ${ok ? 'text-eco-dark' : 'text-red-500'}">${ok ? 'Disponible para ti' : `Te faltan ${p.costo - state.puntos} pts`}</p>
+      <button class="btn mt-3 ${ok ? 'bg-eco text-white' : 'bg-slate-200 text-slate-600'} rounded-xl py-2 text-sm font-bold" onclick="canjear(${p.id})">Canjear</button>
+    </article>`;
+  }).join('');
+}
+
+function canjear(id) {
+  const p = CATALOGO.find(x => x.id === id);
+  if (state.puntos < p.costo) {
+    toast(`Puntos insuficientes: necesitas ${p.costo} y tienes ${state.puntos}.`, 'error');
+    return;
+  }
+  state.puntos -= p.costo;
+  const codigo = genCoupon();
+  state.cupones.unshift({ producto: p.nombre, emoji: p.emoji, codigo, costo: p.costo });
+  addHistory('canje', `Canje: ${p.nombre}`, -p.costo);
+  toast(`¡Canje exitoso! Tu cupón: ${codigo}`);
+  render();
+}
+
+function renderCoupons() {
+  $('#couponEmpty').classList.toggle('hidden', state.cupones.length > 0);
+  $('#couponList').innerHTML = state.cupones.map(c => `
+    <li class="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-eco flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3"><span class="text-3xl">${c.emoji}</span>
+        <div><p class="font-bold text-sm">${c.producto}</p><p class="font-mono text-eco-dark font-bold tracking-wider">${c.codigo}</p></div></div>
+      <button class="btn bg-tech-light text-tech-dark rounded-xl px-3 py-2 text-xs font-bold" onclick="copiar('${c.codigo}')">Copiar</button>
+    </li>`).join('');
+}
+
+function copiar(cod) {
+  (navigator.clipboard ? navigator.clipboard.writeText(cod) : Promise.reject())
+    .then(() => toast('Código copiado', 'info'))
+    .catch(() => toast('Copia el código manualmente: ' + cod, 'info'));
+}
+
+/* ================= ANUNCIOS tipo video (demo, discretos y descartables) ================= */
+const ANUNCIOS = [
+  { marca: 'Samsung',    emoji: '📱', titulo: 'Galaxy: nuevo smartphone',          texto: 'Pantalla AMOLED y gran batería para tu día a día.',   cta: 'Ver oferta',   c: ['#1e3a8a', '#0284c7'] },
+  { marca: 'Apple',      emoji: '📲', titulo: 'iPhone con tu equipo antiguo',      texto: 'Entrega tu celular usado y renueva con descuento.',    cta: 'Conocer más',  c: ['#0f172a', '#475569'] },
+  { marca: 'Xiaomi',     emoji: '🔋', titulo: 'Smartphones con carga rápida',      texto: 'Buena relación precio-calidad para toda la familia.',  cta: 'Ver oferta',   c: ['#c2410c', '#f59e0b'] },
+  { marca: 'Lenovo',     emoji: '💻', titulo: 'Notebooks y tablets para estudiar', texto: 'Equipos livianos pensados para universitarios.',       cta: 'Ver catálogo', c: ['#065f46', '#16a34a'] },
+  { marca: 'Tech Store', emoji: '🎧', titulo: 'Accesorios y audífonos',            texto: 'Cargadores, cables y fundas con envío a regiones.',    cta: 'Explorar',     c: ['#6d28d9', '#0284c7'] }
+];
+const AD_DUR = 12; // segundos por anuncio
+
+function initAds() {
+  document.querySelectorAll('[data-ad]').forEach((slot, i) => {
+    let idx = i % ANUNCIOS.length, t = 0, paused = false, scene = -1;
+    slot.classList.add('relative', 'overflow-hidden', 'rounded-2xl', 'shadow-md', 'select-none', 'text-white');
+    slot.style.aspectRatio = '16/9'; slot.style.maxHeight = '240px'; slot.style.minHeight = '190px';
+    slot.innerHTML = `
+      <div data-bg class="absolute inset-0"></div>
+      <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-white/10 ad-float"></div>
+      <div class="absolute -bottom-12 -right-8 w-48 h-48 rounded-full bg-white/10 ad-float" style="animation-delay:-1.5s"></div>
+      <div data-scene class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pt-4 pb-5"></div>
+      <div data-chip class="absolute top-2 left-2 text-[10px] font-semibold bg-black/40 rounded-full px-2 py-0.5"></div>
+      <div class="absolute top-2 right-2 flex items-center gap-1">
+        <span data-time class="text-[10px] font-semibold bg-black/40 rounded-full px-2 py-0.5"></span>
+        <button data-skip class="btn hidden text-[10px] font-bold bg-white/90 text-slate-800 rounded-full px-2 py-0.5">Omitir ✕</button>
+      </div>
+      <button data-pp aria-label="Pausar" class="btn absolute bottom-3 left-2 w-6 h-6 rounded-full bg-black/40 text-[10px] flex items-center justify-center">⏸</button>
+      <div class="absolute bottom-0 inset-x-0 h-1 bg-white/25"><div data-bar class="h-full bg-white" style="width:0%"></div></div>`;
+    const q = s => slot.querySelector(s);
+
+    function setAd() {
+      const a = ANUNCIOS[idx];
+      q('[data-bg]').style.background = `linear-gradient(135deg, ${a.c[0]}, ${a.c[1]})`;
+      q('[data-chip]').textContent = 'Publicidad · ' + a.marca;
+      scene = -1; t = 0;
+    }
+    function drawScene() {
+      const a = ANUNCIOS[idx];
+      const s = t < 4 ? 0 : t < 8 ? 1 : 2;
+      if (s === scene) return;
+      scene = s;
+      const el = q('[data-scene]');
+      el.innerHTML = s === 0
+        ? `<div class="text-6xl ad-float">${a.emoji}</div><p class="ad-up text-lg font-extrabold mt-2 tracking-wide">${a.marca}</p>`
+        : s === 1
+        ? `<p class="ad-up text-xl font-extrabold leading-tight max-w-md">${a.titulo}</p>`
+        : `<p class="ad-up text-sm max-w-md">${a.texto}</p><button data-cta class="btn ad-pulse mt-3 bg-white text-slate-900 rounded-full px-4 py-2 text-sm font-extrabold">${a.cta}</button>`;
+      const cta = el.querySelector('[data-cta]');
+      if (cta) cta.addEventListener('click', () => toast(`Anuncio de demostración de ${a.marca}: aquí iría el enlace del anunciante.`, 'info'));
+    }
+
+    q('[data-pp]').addEventListener('click', e => { paused = !paused; e.currentTarget.textContent = paused ? '▶' : '⏸'; });
+    q('[data-skip]').addEventListener('click', () => { clearInterval(slot._iv); slot.remove(); });
+
+    setAd(); drawScene();
+    slot._iv = setInterval(() => {
+      if (!document.body.contains(slot)) return clearInterval(slot._iv);
+      if (paused || !slot.offsetParent) return;   // solo avanza cuando la vista está visible
+      t += 0.1;
+      if (t >= AD_DUR) { idx = (idx + 1) % ANUNCIOS.length; setAd(); }
+      drawScene();
+      q('[data-bar]').style.width = (t / AD_DUR * 100) + '%';
+      q('[data-time]').textContent = 'Anuncio · 0:' + String(Math.max(0, Math.ceil(AD_DUR - t))).padStart(2, '0');
+      q('[data-skip]').classList.toggle('hidden', t < 5);
+    }, 100);
+  });
+}
+
+/* ================= INIT ================= */
+document.addEventListener('DOMContentLoaded', () => {
+  initAds();
+  buildNav(); buildChips(); buildQrPattern(); renderPuntos(); updateCalc();
+
+  $('#comunaSearch').addEventListener('input', renderPuntos);
+  $('#calcTipo').addEventListener('change', updateCalc);
+  $('#calcCant').addEventListener('input', updateCalc);
+  document.querySelectorAll('input[name=estado]').forEach(r => r.addEventListener('change', updateCalc));
+  $('#qtyMinus').addEventListener('click', () => { $('#calcCant').value = Math.max(1, (parseInt($('#calcCant').value) || 1) - 1); updateCalc(); });
+  $('#qtyPlus').addEventListener('click', () => { $('#calcCant').value = Math.min(99, (parseInt($('#calcCant').value) || 1) + 1); updateCalc(); });
+  $('#btnRegistrar').addEventListener('click', registrar);
+  $('#btnScan').addEventListener('click', simulateScan);
+
+  navigate('dashboard');
+});
+</script>
+</body>
+</html>
